@@ -2,4 +2,6 @@
 
 Status: In Progress
 
-Description: Using Bayesian Analysis, this project aims to explore factors that affect currency exchange rate, specifically between US, and China. 
+Site Deployed at: https://bayesiancurrencyexchangerate.netlify.app/
+
+Description: Using Bayesian Analysis, this project aims to explore factors that affect currency exchange rate, specifically between US, and China.

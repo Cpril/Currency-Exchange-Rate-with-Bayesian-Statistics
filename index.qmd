@@ -3,15 +3,118 @@ title: Currency Exchange Rates with Bayesian
 authors:
   - name: Priscilla Chen
     affiliation: Calvin University
-    roles: writing
     corresponding: true
 bibliography: references.bib
 ---
 
-## Section
+## Main Question:
 
-This is a simple placeholder for the manuscript's main document [@knuth84].
+How do Differentials in Interest rates, Inflation, and Country's economical Growth impact the currency exchange rate between US dollars and Chinese Yuan?
+
+How confidently can we predict currency exchange rate from Differentials in Interest rates, Inflation, and Country's Economical Growth?
+
+*I would like to do a prediction model if possible, but if not, I'll be satisfied with an inference model as well.*
+
+## Data Preperation
+
+```{r, warning=FALSE}
+#| include: false
+library(dagitty)
+library(ggdag)
+library(CalvinBayes)
+library(dplyr)
+library(mosaic)
+library(tidyverse)
+library(readr)
+```
+
+Data file 1: Monthly Exchange Rate between US dollars and Chinese Yuan, extracted from [Federal Researve](https://www.federalreserve.gov/releases/h10/current/) (Data range from 1990-2 to 2025-2)
 
 ```{r}
-1 + 1
+Exchange_rate <- read.csv("C:/Users/prisc/OneDrive - Calvin University/2Spring/Stat343/Currency-Exchange-Rate-Project/datafiles/FRB_H10 (1).csv", skip = 5)
+Exchange_rate <- Exchange_rate |>
+  mutate(Time.Period = paste0(Time.Period, "-01"))|>
+  rename(Exchange_rate = RXI_N.M.CH,
+         observation_date = Time.Period)
+```
+
+Data File 2: Inflation: YEARLY Consumer Prices for USA from [Federal Reserve Bank of St. Louis](https://fred.stlouisfed.org/series/FPCPITOTLZGUSA). (Note this dataset only contain data till 2023)
+
+```{r}
+Inflation_US <- read.csv("C:/Users/prisc/OneDrive - Calvin University/2Spring/Stat343/Currency-Exchange-Rate-Project/datafiles/FPCPITOTLZGUSA.csv")
+Inflation_US <- Inflation_US |>
+  rename(Inflation_US = FPCPITOTLZGUSA )
+```
+
+Data File 3: Inflation: YEARLY Consumer Prices for China from [Federal Reserve Bank of St. Louis](https://fred.stlouisfed.org/series/FPCPITOTLZGCHN). (Note this dataset only contain data till 2023)
+
+```{r}
+Inflation_CN <- read.csv("C:/Users/prisc/OneDrive - Calvin University/2Spring/Stat343/Currency-Exchange-Rate-Project/datafiles/FPCPITOTLZGCHN.csv")
+Inflation_CN <- Inflation_CN |>
+  rename(Inflation_CN = FPCPITOTLZGCHN )
+```
+
+Data File 4: Monthly GDP Ratio to Trend for USA, downloaded from [Federal Reserve Bank of St. Louis](https://fred.stlouisfed.org/series/USALORSGPRTSTSAM). (Note this dataset only contain data till 2023-11-01)
+
+```{r}
+GDP_US <- read.csv("C:/Users/prisc/OneDrive - Calvin University/2Spring/Stat343/Currency-Exchange-Rate-Project/datafiles/USALORSGPNOSTSAM.csv")
+GDP_US <- GDP_US |>
+  rename(GDP_US = USALORSGPNOSTSAM )
+
+```
+
+Data File 5: Monthly GDP Ratio to Trend for China, downloaded from [Federal Reserve Bank of St. Louis](https://fred.stlouisfed.org/series/CHNLORSGPRTSTSAM). (Note this dataset only contain data till 2024-02-01)
+
+```{r}
+GDP_CHINA <- read.csv("C:/Users/prisc/OneDrive - Calvin University/2Spring/Stat343/Currency-Exchange-Rate-Project/datafiles/CHNLORSGPNOSTSAM.csv")
+GDP_CHINA <- GDP_CHINA |>
+  rename(GDP_CN = CHNLORSGPNOSTSAM )
+```
+
+Data file 6: Monthly US Interest Rate (Rates which Federal Reserve charge on banks for overnight borrow), downloaded from [Federal Reserve Bank of St. Louis](https://fred.stlouisfed.org/series/INTDSRUSM193N). (Note this dataset only contain data till 2021-08-01)
+
+```{r}
+Interest_US <- read.csv("C:/Users/prisc/OneDrive - Calvin University/2Spring/Stat343/Currency-Exchange-Rate-Project/datafiles/INTDSRUSM193N.csv")
+Interest_US <- Interest_US |>
+  rename(Interest_US = INTDSRUSM193N)
+```
+
+Data file 7: Monthly Chinese Interest Rate (Rates which Federal Reserve charge on banks for overnight borrow), downloaded from [Federal Reserve Bank of St. Louis](https://fred.stlouisfed.org/series/INTDSRCNM193N)
+
+```{r}
+Interest_CN <- read.csv("C:/Users/prisc/OneDrive - Calvin University/2Spring/Stat343/Currency-Exchange-Rate-Project/datafiles/INTDSRCNM193N.csv")
+Interest_CN <- Interest_CN |>
+  rename(Interest_CN = INTDSRCNM193N)
+```
+
+**Joined Data:**
+
+```{r}
+datasets <- list(Exchange_rate,GDP_CHINA,GDP_US, Inflation_CN, Inflation_US, Interest_CN, Interest_US)
+
+data <- reduce(datasets, full_join, by = "observation_date")
+
+data <- data|>
+  mutate(Dif_GPD = GDP_CN - GDP_US,
+         Dif_Interest_Rate = Interest_CN - Interest_US,
+         Dif_Inflation_Rate = Inflation_CN - Inflation_US)
+glimpse(data)
+```
+
+*Alternatively, I want to also scale these variables (those starting with Dif), which I don't know how to yet.*
+
+## Casual Diagram:
+
+[Economics Help](https://www.economicshelp.org/macroeconomics/exchangerate/factors-influencing/) listed 5 factors that would affect exchange rate: rate of growth, Interest rate, Inflation rate, Competitiveness, and Speculations. Since competitiveness and Speculations are hard to measure quantitatively, they are not included. Besides, rate of growth is measured by GDP ratio.
+
+*The code for Casual Diagram is producing error right not, I haven't got to fixing it yet*
+
+```{r}
+# causal_diagram <- dagitty("dag{
+#   Interest_Rate -> Exchange_Rate;
+#   Interest_Rate -> Inflation_Rate;
+#   Inflation_Rate -> Exchange_Rate;
+#   Growth_Rate -> Exchange_Rate;
+# }")
+# gg_dag(causal_diagram)
 ```

@@ -20,27 +20,7 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
-/* CSS for citations */
-div.csl-bib-body { }
-div.csl-entry {
-  clear: both;
-  margin-bottom: 0em;
-}
-.hanging-indent div.csl-entry {
-  margin-left:2em;
-  text-indent:-2em;
-}
-div.csl-left-margin {
-  min-width:2em;
-  float:left;
-}
-div.csl-right-inline {
-  margin-left:2em;
-  padding-left:1em;
-}
-div.csl-indent {
-  margin-left: 2em;
-}</style>
+</style>
 
 
 <script src="site_libs/clipboard/clipboard.min.js"></script>
@@ -113,7 +93,9 @@ div.csl-indent {
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#section" id="toc-section" class="nav-link active" data-scroll-target="#section">Section</a></li>
+  <li><a href="#main-question" id="toc-main-question" class="nav-link active" data-scroll-target="#main-question">Main Question:</a></li>
+  <li><a href="#data-preperation" id="toc-data-preperation" class="nav-link" data-scroll-target="#data-preperation">Data Preperation</a></li>
+  <li><a href="#casual-diagram" id="toc-casual-diagram" class="nav-link" data-scroll-target="#casual-diagram">Casual Diagram:</a></li>
   </ul>
 <div class="quarto-alternate-notebooks"><h2>Notebooks</h2><ul><li><a href="index-preview.html"><i class="bi bi-journal-code"></i>Article Notebook</a></li></ul></div></nav>
 </div>
@@ -126,22 +108,48 @@ div.csl-indent {
   
 
 
-<section id="section" class="level2">
-<h2 class="anchored" data-anchor-id="section">Section</h2>
-<p>This is a simple placeholder for the manuscript’s main document <span class="citation" data-cites="knuth84">(<a href="#ref-knuth84" role="doc-biblioref">Knuth 1984</a>)</span>.</p>
+<section id="main-question" class="level2">
+<h2 class="anchored" data-anchor-id="main-question">Main Question:</h2>
+<p>How do Differentials in Interest rates, Inflation, and Country’s economical Growth impact the currency exchange rate between US dollars and Chinese Yuan?</p>
+<p>How confidently can we predict currency exchange rate from Differentials in Interest rates, Inflation, and Country’s Economical Growth?</p>
+<p><em>I would like to do a prediction model if possible, but if not, I’ll be satisfied with an inference model as well.</em></p>
+</section>
+<section id="data-preperation" class="level2">
+<h2 class="anchored" data-anchor-id="data-preperation">Data Preperation</h2>
+<p>Data file 1: Monthly Exchange Rate between US dollars and Chinese Yuan, extracted from <a href="https://www.federalreserve.gov/releases/h10/current/">Federal Researve</a> (Data range from 1990-2 to 2025-2)</p>
+<p>Data File 2: Inflation: YEARLY Consumer Prices for USA from <a href="https://fred.stlouisfed.org/series/FPCPITOTLZGUSA">Federal Reserve Bank of St.&nbsp;Louis</a>. (Note this dataset only contain data till 2023)</p>
+<p>Data File 3: Inflation: YEARLY Consumer Prices for China from <a href="https://fred.stlouisfed.org/series/FPCPITOTLZGCHN">Federal Reserve Bank of St.&nbsp;Louis</a>. (Note this dataset only contain data till 2023)</p>
+<p>Data File 4: Monthly GDP Ratio to Trend for USA, downloaded from <a href="https://fred.stlouisfed.org/series/USALORSGPRTSTSAM">Federal Reserve Bank of St.&nbsp;Louis</a>. (Note this dataset only contain data till 2023-11-01)</p>
+<p>Data File 5: Monthly GDP Ratio to Trend for China, downloaded from <a href="https://fred.stlouisfed.org/series/CHNLORSGPRTSTSAM">Federal Reserve Bank of St.&nbsp;Louis</a>. (Note this dataset only contain data till 2024-02-01)</p>
+<p>Data file 6: Monthly US Interest Rate (Rates which Federal Reserve charge on banks for overnight borrow), downloaded from <a href="https://fred.stlouisfed.org/series/INTDSRUSM193N">Federal Reserve Bank of St.&nbsp;Louis</a>. (Note this dataset only contain data till 2021-08-01)</p>
+<p>Data file 7: Monthly Chinese Interest Rate (Rates which Federal Reserve charge on banks for overnight borrow), downloaded from <a href="https://fred.stlouisfed.org/series/INTDSRCNM193N">Federal Reserve Bank of St.&nbsp;Louis</a></p>
+<p><strong>Joined Data:</strong></p>
 <div class="cell">
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 2</code></pre>
+<pre><code>Rows: 937
+Columns: 11
+$ observation_date   &lt;chr&gt; "1990-01-01", "1990-02-01", "1990-03-01", "1990-04-…
+$ Exchange_rate      &lt;dbl&gt; 4.7339, 4.7339, 4.7339, 4.7339, 4.7339, 4.7339, 4.7…
+$ GDP_CN             &lt;dbl&gt; 96.86580, 96.60166, 96.44037, 96.36356, 96.35556, 9…
+$ GDP_US             &lt;dbl&gt; 101.34920, 101.37080, 101.36490, 101.31980, 101.227…
+$ Inflation_CN       &lt;dbl&gt; 3.052290, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, N…
+$ Inflation_US       &lt;dbl&gt; 5.397956, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, N…
+$ Interest_CN        &lt;dbl&gt; NA, NA, 9.00, 9.00, 9.00, 9.00, 9.00, 7.92, 7.92, 7…
+$ Interest_US        &lt;dbl&gt; 7.00, 7.00, 7.00, 7.00, 7.00, 7.00, 7.00, 7.00, 7.0…
+$ Dif_GPD            &lt;dbl&gt; -4.48340, -4.76914, -4.92453, -4.95624, -4.87174, -…
+$ Dif_Interest_Rate  &lt;dbl&gt; NA, NA, 2.00, 2.00, 2.00, 2.00, 2.00, 0.92, 0.92, 0…
+$ Dif_Inflation_Rate &lt;dbl&gt; -2.3456663, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA,…</code></pre>
 </div>
 <a class="quarto-notebook-link" id="nblink-1" href="index-preview.html">Source: Article Notebook</a></div>
-
+<p><em>Alternatively, I want to also scale these variables (those starting with Dif), which I don’t know how to yet.</em></p>
+</section>
+<section id="casual-diagram" class="level2">
+<h2 class="anchored" data-anchor-id="casual-diagram">Casual Diagram:</h2>
+<p><a href="https://www.economicshelp.org/macroeconomics/exchangerate/factors-influencing/">Economics Help</a> listed 5 factors that would affect exchange rate: rate of growth, Interest rate, Inflation rate, Competitiveness, and Speculations. Since competitiveness and Speculations are hard to measure quantitatively, they are not included. Besides, rate of growth is measured by GDP ratio.</p>
+<p><em>The code for Casual Diagram is producing error right not, I haven’t got to fixing it yet</em></p>
 </section>
 
-<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
-<div id="ref-knuth84" class="csl-entry" role="listitem">
-Knuth, Donald E. 1984. <span>“Literate Programming.”</span> <em>Comput. J.</em> 27 (2): 97–111. <a href="https://doi.org/10.1093/comjnl/27.2.97">https://doi.org/10.1093/comjnl/27.2.97</a>.
-</div>
-</div></section></div></main>
+</main>
 <!-- /main column -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
