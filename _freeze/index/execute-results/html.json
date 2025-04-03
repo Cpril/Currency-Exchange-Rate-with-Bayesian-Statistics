@@ -1,0 +1,17 @@
+{
+  "hash": "4e97b459dbbab8a227f6a61c3e743c06",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: Currency Exchange Rates with Bayesian\nauthors:\n  - name: Priscilla Chen\n    affiliation: Calvin University\n    roles: writing\n    corresponding: true\nbibliography: references.bib\n---\n\n\n\n\n## Section\n\nThis is a simple placeholder for the manuscript's main document [@knuth84].\n\n\n\n\n::: {.cell}\n\n```{.r .cell-code .hidden}\n1 + 1\n```\n\n::: {.cell-output .cell-output-stdout}\n\n```\n[1] 2\n```\n\n\n:::\n:::\n",
+    "supporting": [
+      "index_files"
+    ],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}
