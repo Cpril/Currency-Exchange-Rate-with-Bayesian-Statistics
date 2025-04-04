@@ -1,10 +1,11 @@
 ---
 title: Currency Exchange Rates with Bayesian
-authors:
-  - name: Priscilla Chen
-    affiliation: Calvin University
-    corresponding: true
-bibliography: references.bib
+author: Priscilla Chen
+format:
+  html:
+    code-tools: true
+    toc: true
+    embed-resources: true
 ---
 
 ## Main Question:
@@ -23,9 +24,9 @@ library(dagitty)
 library(ggdag)
 library(CalvinBayes)
 library(dplyr)
-library(mosaic)
+# library(mosaic)
 library(tidyverse)
-library(readr)
+# library(readr)
 ```
 
 Data file 1: Monthly Exchange Rate between US dollars and Chinese Yuan, extracted from [Federal Researve](https://www.federalreserve.gov/releases/h10/current/) (Data range from 1990-2 to 2025-2)
@@ -103,18 +104,20 @@ glimpse(data)
 
 *Alternatively, I want to also scale these variables (those starting with Dif), which I don't know how to yet.*
 
+*Also all variables except Inflation Rate are measured monthly, and I really would like  monthly data as exchange rate can change dramatically within a year, so I still need to figure out what to do with Inflation rate data that are NA right now. *
+
+
 ## Casual Diagram:
 
 [Economics Help](https://www.economicshelp.org/macroeconomics/exchangerate/factors-influencing/) listed 5 factors that would affect exchange rate: rate of growth, Interest rate, Inflation rate, Competitiveness, and Speculations. Since competitiveness and Speculations are hard to measure quantitatively, they are not included. Besides, rate of growth is measured by GDP ratio.
 
-*The code for Casual Diagram is producing error right not, I haven't got to fixing it yet*
 
 ```{r}
-# causal_diagram <- dagitty("dag{
-#   Interest_Rate -> Exchange_Rate;
-#   Interest_Rate -> Inflation_Rate;
-#   Inflation_Rate -> Exchange_Rate;
-#   Growth_Rate -> Exchange_Rate;
-# }")
-# gg_dag(causal_diagram)
+causal_diagram <- dagitty("dag{
+  Interest_Rate -> Exchange_Rate;
+  Inflation_Rate -> Exchange_Rate;
+  Interest_Rate -> Inflation_Rate;
+  Growth_Rate -> Exchange_Rate;
+}")
+gg_dag(causal_diagram)
 ```
