@@ -100,18 +100,25 @@ data <- data|>
   mutate(Dif_GPD = GDP_CN - GDP_US,
          Dif_Interest_Rate = Interest_CN - Interest_US,
          Dif_Inflation_Rate = Inflation_CN - Inflation_US)
-glimpse(data)
+# glimpse(data)
+
+# scaling all variables other than observation_date. 
+scaled_data <- data %>%
+  mutate(across(
+    .cols = where(is.numeric),
+    .fns = ~ scale(.) %>% as.vector
+  ))
+glimpse(scaled_data)
 ```
 
-*Alternatively, I want to also scale these variables (those starting with Dif), which I don't know how to yet.*
-
-*Also all variables except Inflation Rate are measured monthly, and I really would like  monthly data as exchange rate can change dramatically within a year, so I still need to figure out what to do with Inflation rate data that are NA right now. *
+*All variables except Inflation Rate are measured monthly, and I really would like  monthly data as exchange rate can change dramatically within a year, so I still need to figure out what to do with Inflation rate data that are NA right now. *
 
 
 ## Casual Diagram:
 
 [Economics Help](https://www.economicshelp.org/macroeconomics/exchangerate/factors-influencing/) listed 5 factors that would affect exchange rate: rate of growth, Interest rate, Inflation rate, Competitiveness, and Speculations. Since competitiveness and Speculations are hard to measure quantitatively, they are not included. Besides, rate of growth is measured by GDP ratio.
 
+*I also think the later exchange rate would be influenced by the previous exchange rate, but I don't know how to include that in the model. Does Bayesian approach automatically that this into acount?*
 
 ```{r}
 causal_diagram <- dagitty("dag{
