@@ -15,8 +15,6 @@ How do Differentials in Interest rates, Inflation, and Country's economical Grow
 
 How confidently can we predict currency exchange rate from Differentials in Interest rates, Inflation, and Country's Economical Growth?
 
-*I would like to do a prediction model if possible, but if not, I'll be satisfied with an inference model as well.*
-
 ## Data Preperation
 
 ```{r, warning=FALSE}
@@ -32,12 +30,14 @@ library(readr)
 
 Data file 1: Monthly Exchange Rate between US dollars and Chinese Yuan, extracted from [Federal Researve](https://www.federalreserve.gov/releases/h10/current/) (Data range from 1990-2 to 2025-2)
 
-```{r}
+```{r, echo=FALSE}
 Exchange_rate <- read.csv("C:/Users/prisc/OneDrive - Calvin University/2Spring/Stat341/Currency-Exchange-Rate-Project/datafiles/FRB_H10 (1).csv", skip = 5)
 Exchange_rate <- Exchange_rate |>
   mutate(Time.Period = paste0(Time.Period, "-01"))|>
   rename(Exchange_rate = RXI_N.M.CH,
          observation_date = Time.Period)
+
+Exchange_rate$observation_date <- as.Date(Exchange_rate$observation_date)
 ```
 
 Data File 2: Inflation: YEARLY Consumer Prices for USA from [Federal Reserve Bank of St. Louis](https://fred.stlouisfed.org/series/FPCPITOTLZGUSA). (Note this dataset only contain data till 2023)
@@ -46,6 +46,24 @@ Data File 2: Inflation: YEARLY Consumer Prices for USA from [Federal Reserve Ban
 Inflation_US <- read.csv("C:/Users/prisc/OneDrive - Calvin University/2Spring/Stat341/Currency-Exchange-Rate-Project/datafiles/FPCPITOTLZGUSA.csv")
 Inflation_US <- Inflation_US |>
   rename(Inflation_US = FPCPITOTLZGUSA )
+
+# create a copy
+inflation_data <- Inflation_US
+inflation_data$observation_date <- as.Date(inflation_data$observation_date)
+# extract year series
+year_vector <- as.numeric(format(inflation_data$observation_date, "%Y"))
+# extract yearly Inflation value
+yearly_values <- inflation_data$Inflation_US
+# creating a monthly series
+monthly_dates <- seq(from = as.Date("1987-01-01"), to = as.Date("2023-01-01"), by = "month")
+
+# convert using linear interpolation
+monthly_year_fraction <- as.numeric(format(monthly_dates, "%Y")) +
+                         (as.numeric(format(monthly_dates, "%m")) - 1) / 12
+monthly_inflation <- approx(x = year_vector, y = yearly_values, xout = monthly_year_fraction)$y
+
+# Combine data
+monthly_inflation_US <- data.frame(observation_date = monthly_dates, Monthly_Inflation_US = monthly_inflation)
 ```
 
 Data File 3: Inflation: YEARLY Consumer Prices for China from [Federal Reserve Bank of St. Louis](https://fred.stlouisfed.org/series/FPCPITOTLZGCHN). (Note this dataset only contain data till 2023)
@@ -53,53 +71,80 @@ Data File 3: Inflation: YEARLY Consumer Prices for China from [Federal Reserve B
 ```{r}
 Inflation_CN <- read.csv("C:/Users/prisc/OneDrive - Calvin University/2Spring/Stat341/Currency-Exchange-Rate-Project/datafiles/FPCPITOTLZGCHN.csv")
 Inflation_CN <- Inflation_CN |>
-  rename(Inflation_CN = FPCPITOTLZGCHN )
+  rename(Inflation_CN = FPCPITOTLZGCHN)
+# create a copy
+inflation_data <- Inflation_CN
+inflation_data$observation_date <- as.Date(inflation_data$observation_date)
+# extract year series
+year_vector <- as.numeric(format(inflation_data$observation_date, "%Y"))
+# extract yearly Inflation value
+yearly_values <- inflation_data$Inflation_CN
+# creating a monthly series
+monthly_dates <- seq(from = as.Date("1987-01-01"), to = as.Date("2023-01-01"), by = "month")
+
+# convert using linear interpolation
+monthly_year_fraction <- as.numeric(format(monthly_dates, "%Y")) +
+                         (as.numeric(format(monthly_dates, "%m")) - 1) / 12
+monthly_inflation <- approx(x = year_vector, y = yearly_values, xout = monthly_year_fraction)$y
+
+# Combine data
+monthly_inflation_CN <- data.frame(observation_date = monthly_dates, Monthly_Inflation_CN = monthly_inflation)
+
 ```
+
 
 Data File 4: Monthly GDP Ratio to Trend for USA, downloaded from [Federal Reserve Bank of St. Louis](https://fred.stlouisfed.org/series/USALORSGPRTSTSAM). (Note this dataset only contain data till 2023-11-01)
 
-```{r}
+```{r, echo=FALSE}
 GDP_US <- read.csv("C:/Users/prisc/OneDrive - Calvin University/2Spring/Stat341/Currency-Exchange-Rate-Project/datafiles/USALORSGPNOSTSAM.csv")
 GDP_US <- GDP_US |>
   rename(GDP_US = USALORSGPNOSTSAM )
-
+GDP_US$observation_date <- as.Date(GDP_US$observation_date)
 ```
 
 Data File 5: Monthly GDP Ratio to Trend for China, downloaded from [Federal Reserve Bank of St. Louis](https://fred.stlouisfed.org/series/CHNLORSGPRTSTSAM). (Note this dataset only contain data till 2024-02-01)
 
-```{r}
-GDP_CHINA <- read.csv("C:/Users/prisc/OneDrive - Calvin University/2Spring/Stat341/Currency-Exchange-Rate-Project/datafiles/CHNLORSGPNOSTSAM.csv")
-GDP_CHINA <- GDP_CHINA |>
-  rename(GDP_CN = CHNLORSGPNOSTSAM )
+```{r, echo=FALSE}
+GDP_CN <- read.csv("C:/Users/prisc/OneDrive - Calvin University/2Spring/Stat341/Currency-Exchange-Rate-Project/datafiles/CHNLORSGPNOSTSAM.csv")
+GDP_CN <- GDP_CN |>
+  rename(GDP_CN = CHNLORSGPNOSTSAM)
+GDP_CN$observation_date <- as.Date(GDP_CN$observation_date)
 ```
 
 Data file 6: Monthly US Interest Rate (Rates which Federal Reserve charge on banks for overnight borrow), downloaded from [Federal Reserve Bank of St. Louis](https://fred.stlouisfed.org/series/INTDSRUSM193N). (Note this dataset only contain data till 2021-08-01)
 
-```{r}
+```{r, echo=FALSE}
 Interest_US <- read.csv("C:/Users/prisc/OneDrive - Calvin University/2Spring/Stat341/Currency-Exchange-Rate-Project/datafiles/INTDSRUSM193N.csv")
 Interest_US <- Interest_US |>
   rename(Interest_US = INTDSRUSM193N)
+
+Interest_US$observation_date <- as.Date(Interest_US$observation_date)
 ```
 
 Data file 7: Monthly Chinese Interest Rate (Rates which Federal Reserve charge on banks for overnight borrow), downloaded from [Federal Reserve Bank of St. Louis](https://fred.stlouisfed.org/series/INTDSRCNM193N)
 
-```{r}
+```{r, echo=FALSE}
 Interest_CN <- read.csv("C:/Users/prisc/OneDrive - Calvin University/2Spring/Stat341/Currency-Exchange-Rate-Project/datafiles/INTDSRCNM193N.csv")
 Interest_CN <- Interest_CN |>
   rename(Interest_CN = INTDSRCNM193N)
+Interest_CN$observation_date <- as.Date(Interest_CN$observation_date)
 ```
 
 **Joined Data:**
 
 ```{r}
-datasets <- list(Exchange_rate,GDP_CHINA,GDP_US, Inflation_CN, Inflation_US, Interest_CN, Interest_US)
+datasets <- list(Exchange_rate,GDP_CN,GDP_US, monthly_inflation_CN, monthly_inflation_US, Interest_CN, Interest_US)
 
 data <- reduce(datasets, full_join, by = "observation_date")
 
 data <- data|>
   mutate(Dif_GPD = GDP_CN - GDP_US,
          Dif_Interest_Rate = Interest_CN - Interest_US,
-         Dif_Inflation_Rate = Inflation_CN - Inflation_US)
+         Dif_Inflation_Rate = Monthly_Inflation_CN - Monthly_Inflation_US)|>
+  # "first difference"
+  mutate(delta_exch_rate = Exchange_rate - lag(Exchange_rate))
+# get rid of the first two row because there's some missing data. 
+data <- data[-c(1, 2), ]
 # glimpse(data)
 
 # scaling all variables other than observation_date. 
@@ -111,21 +156,54 @@ scaled_data <- data %>%
 glimpse(scaled_data)
 ```
 
-*All variables except Inflation Rate are measured monthly, and I really would like  monthly data as exchange rate can change dramatically within a year, so I still need to figure out what to do with Inflation rate data that are NA right now. *
+
+*Changes from last time: *
+
+*- I took the advice of using 'first difference' and computed delta_exch_rate *
+
+*- for dataset 2 and 3, I transformed the yearly inflation rate data into monthly data using linear interpolation, assuming the datapoints within a year are roughly linear. I might think about using the Bayesian approach that deal with missing data, if time allows. *
+
 
 
 ## Casual Diagram:
 
 [Economics Help](https://www.economicshelp.org/macroeconomics/exchangerate/factors-influencing/) listed 5 factors that would affect exchange rate: rate of growth, Interest rate, Inflation rate, Competitiveness, and Speculations. Since competitiveness and Speculations are hard to measure quantitatively, they are not included. Besides, rate of growth is measured by GDP ratio.
 
-*I also think the later exchange rate would be influenced by the previous exchange rate, but I don't know how to include that in the model. Does Bayesian approach automatically that this into acount?*
 
 ```{r}
 causal_diagram <- dagitty("dag{
-  Interest_Rate -> Exchange_Rate;
-  Inflation_Rate -> Exchange_Rate;
-  Interest_Rate -> Inflation_Rate;
-  Growth_Rate -> Exchange_Rate;
+  Interest_Rate_dif -> delta_Exchange_Rate;
+  Inflation_Rate_dif -> delta_Exchange_Rate;
+  Interest_Rate_dif -> Inflation_Rate_dif;
+  Growth_Rate_dif -> delta_Exchange_Rate;
 }")
 gg_dag(causal_diagram)
 ```
+
+## Model Description
+$$
+\text{Exchange Rate Difference Scaled}_{observed} \sim \text{Normal}(\text{Exchange Rate Difference Scaled}_{true_i}, \text{D}_{SE_i})
+$$
+$$
+\text{Exchange Rate Difference Scaled}_{true_i} \sim \text{Normal}(\mu_i, \sigma) 
+$$
+$$\mu_i \sim \beta_0 + \beta_1 * \text{Interest Rate Difference Scaled} + \beta_2 * \text{Inflation Rate Difference Scaled} + \beta_3 * \text{Growth Rate Difference Scaled} $$
+$$
+\beta_0 \sim \text{Normal}(0,1)
+$$
+$$
+\beta_1 \sim \text{Normal}(0,1)
+$$
+$$
+\beta_2 \sim \text{Normal}(0,1)
+$$
+$$
+\beta_3 \sim \text{Normal}(0,1)
+$$
+$$
+\sigma \sim \text{Exponential}(1)
+$$
+
+## Rationals for Prior
+
+Since I standardized all predictors and response variable, and are unsure of the relationship between those predictors and the response variable (there are ambivalent information about the direction of the affects of these predictors on exchange rate), so I have priors of the intercept and slope centers at 0 with standard deviation of 1. These priors suggests that I suspect if all predictors are kept at 0, the response variable would be at its mean (z-score = 0). And for all predictors, their relationship with the response variable are equally likely to be positive or negative, and most likely fall within -3 and 3 standard deviation. 
