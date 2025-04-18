@@ -26,6 +26,8 @@ library(dplyr)
 # library(mosaic)
 library(tidyverse)
 library(readr)
+library(rstan)
+library(bayesplot)
 ```
 
 Data file 1: Monthly Exchange Rate between US dollars and Chinese Yuan, extracted from [Federal Researve](https://www.federalreserve.gov/releases/h10/current/) (Data range from 1990-2 to 2025-2)
@@ -42,7 +44,7 @@ Exchange_rate$observation_date <- as.Date(Exchange_rate$observation_date)
 
 Data File 2: Inflation: YEARLY Consumer Prices for USA from [Federal Reserve Bank of St. Louis](https://fred.stlouisfed.org/series/FPCPITOTLZGUSA). (Note this dataset only contain data till 2023)
 
-```{r}
+```{r,echo=FALSE}
 Inflation_US <- read.csv("C:/Users/prisc/OneDrive - Calvin University/2Spring/Stat341/Currency-Exchange-Rate-Project/datafiles/FPCPITOTLZGUSA.csv")
 Inflation_US <- Inflation_US |>
   rename(Inflation_US = FPCPITOTLZGUSA )
@@ -68,7 +70,7 @@ monthly_inflation_US <- data.frame(observation_date = monthly_dates, Monthly_Inf
 
 Data File 3: Inflation: YEARLY Consumer Prices for China from [Federal Reserve Bank of St. Louis](https://fred.stlouisfed.org/series/FPCPITOTLZGCHN). (Note this dataset only contain data till 2023)
 
-```{r}
+```{r, echo=FALSE}
 Inflation_CN <- read.csv("C:/Users/prisc/OneDrive - Calvin University/2Spring/Stat341/Currency-Exchange-Rate-Project/datafiles/FPCPITOTLZGCHN.csv")
 Inflation_CN <- Inflation_CN |>
   rename(Inflation_CN = FPCPITOTLZGCHN)
@@ -138,9 +140,9 @@ datasets <- list(Exchange_rate,GDP_CN,GDP_US, monthly_inflation_CN, monthly_infl
 data <- reduce(datasets, full_join, by = "observation_date")
 
 data <- data|>
-  mutate(Dif_GPD = GDP_CN - GDP_US,
-         Dif_Interest_Rate = Interest_CN - Interest_US,
-         Dif_Inflation_Rate = Monthly_Inflation_CN - Monthly_Inflation_US)|>
+  mutate(Dif_GDP = GDP_US - GDP_CN,
+         Dif_Interest_Rate = Interest_US - Interest_CN,
+         Dif_Inflation_Rate = Monthly_Inflation_US - Monthly_Inflation_CN)|>
   # "first difference"
   mutate(delta_exch_rate = Exchange_rate - lag(Exchange_rate))
 # get rid of the first two row because there's some missing data. 
@@ -153,17 +155,13 @@ scaled_data <- data %>%
     .cols = where(is.numeric),
     .fns = ~ scale(.) %>% as.vector
   ))
+```
+```{r}
+scaled_data <- scaled_data |>
+  select(Dif_GDP, Dif_Interest_Rate, Dif_Inflation_Rate, delta_exch_rate)
+scaled_data <- na.omit(scaled_data)
 glimpse(scaled_data)
 ```
-
-
-*Changes from last time: *
-
-*- I took the advice of using 'first difference' and computed delta_exch_rate *
-
-*- for dataset 2 and 3, I transformed the yearly inflation rate data into monthly data using linear interpolation, assuming the datapoints within a year are roughly linear. I might think about using the Bayesian approach that deal with missing data, if time allows. *
-
-
 
 ## Casual Diagram:
 
@@ -181,24 +179,22 @@ gg_dag(causal_diagram)
 ```
 
 ## Model Description
+
 $$
-\text{Exchange Rate Difference Scaled}_{observed} \sim \text{Normal}(\text{Exchange Rate Difference Scaled}_{true_i}, \text{D}_{SE_i})
-$$
-$$
-\text{Exchange Rate Difference Scaled}_{true_i} \sim \text{Normal}(\mu_i, \sigma) 
+\text{Exchange Rate Difference Scaled} \sim \text{Normal}(\mu_i, \sigma) 
 $$
 $$\mu_i \sim \beta_0 + \beta_1 * \text{Interest Rate Difference Scaled} + \beta_2 * \text{Inflation Rate Difference Scaled} + \beta_3 * \text{Growth Rate Difference Scaled} $$
 $$
 \beta_0 \sim \text{Normal}(0,1)
 $$
 $$
-\beta_1 \sim \text{Normal}(0,1)
+\beta_1 \sim \text{Normal}(0.5,1)
 $$
 $$
-\beta_2 \sim \text{Normal}(0,1)
+\beta_2 \sim \text{Normal}(-0.5,1)
 $$
 $$
-\beta_3 \sim \text{Normal}(0,1)
+\beta_3 \sim \text{Normal}(0.5,1)
 $$
 $$
 \sigma \sim \text{Exponential}(1)
@@ -207,3 +203,97 @@ $$
 ## Rationals for Prior
 
 Since I standardized all predictors and response variable, and are unsure of the relationship between those predictors and the response variable (there are ambivalent information about the direction of the affects of these predictors on exchange rate), so I have priors of the intercept and slope centers at 0 with standard deviation of 1. These priors suggests that I suspect if all predictors are kept at 0, the response variable would be at its mean (z-score = 0). And for all predictors, their relationship with the response variable are equally likely to be positive or negative, and most likely fall within -3 and 3 standard deviation. 
+
+
+
+Higher Interest Rate, on the other hand, can attract foreign investers and drive up the currency value(https://www.investopedia.com/trading/factors-influence-exchange-rates/). Therefore, if dif_interest_rate (US - CN) increases, delta_dif_exchange_rate will increase, meaning US currency will worth more in China currency. For its slope, beta 1, I'm using a normal distribution center at 0.5 and has the standard deviation of 1. This means that for one standard deviation increase in differential in interest rate, the delta differential in exchange rate will most likely increase by 0.5 standard deviation. However, there is still possibility for a wider range of slope from negative to positive.
+
+Higher inflation rate can depreciate the currency and thus lowers the exchange rate.  (https://www.investopedia.com/trading/factors-influence-exchange-rates/) . Therefore, if Dif_inflation_rate increases, delta_dif_exchange_rate should decrease. I'm using a normal distribution center at -0.5 and has the standard deviation of 1. This means that for one standard deviation increase in differential in inflation rate, I suspect the differential in delta exchange rate will most likely decrease by 0.5 standard deviation. However, there's still possibility for a wide range of positive and negative slopes.  
+
+
+GDP measures growth. The better the growth, the better the currency for it attracts foreign investers, driving up the needs for the currency (https://www.economicshelp.org/macroeconomics/exchangerate/factors-influencing/). Therefore, if Dif_GDP increase,  delta_dif_exchange_rate should also increase. For the slope for Dif_GDP, Beta 3, I'm using a normal distribution centering at 0.5 with standard deviation of 1. This prior suggests a likely possitive relationship between GDP and exchange rate, but still keep the possibility for a wide range of both positive and negative values.
+
+I suspect if all the above are kept at 0, there would be no change in exchange rate. Therefore I used a normal distribution that centers at 0 with standard deviation of 1 for Beta 0, the intercept. 
+
+I'm using exponential(1) as the prior for sigma, with lower bound at 0, because the standard deviation cannot be 0. 
+
+## Prior Predictive Distribution
+```{r}
+n_sim <- 500
+
+
+predictors <- scaled_data |>
+  select(Dif_Interest_Rate, Dif_Inflation_Rate, Dif_GDP) |>
+  rename(interest = Dif_Interest_Rate,
+         inflation = Dif_Inflation_Rate,
+         growth = Dif_GDP) |>
+  mutate(obs_id = row_number())
+
+priors <- tibble(
+  sim_id = 1:n_sim,
+  beta_0 = rnorm(n_sim, 0, 1),
+  beta_1 = rnorm(n_sim, 0.5, 1),
+  beta_2 = rnorm(n_sim, -0.5, 1),
+  beta_3 = rnorm(n_sim, 0.5, 1),
+  sigma = rexp(n_sim, 1)
+)
+
+prior_pred <- crossing(priors, predictors) |>
+  mutate(
+    mu = beta_0 + beta_1 * interest + beta_2 * inflation + beta_3 * growth,
+    y_sim = rnorm(n(), mean = mu, sd = sigma)
+  )|>
+  ungroup()
+
+```
+```{r}
+gf_histogram(~y_sim,
+             data = prior_pred)
+```
+
+The prior predictive distribution show the simulated delta_exchange_rate differences centers at 0, and have a range from about -12 to 12, which is large for a scaled z-score variable, but this wide range can make sure we don't exclude possible values. 
+
+*I started fitting the model but it still runs error now.*
+
+## Fitting Model
+
+```{r, eval=FALSE}
+
+stan_program <- '
+data {
+  int<lower=1> n;     // number of observations
+  vector[n] delta_exch_rate;    // response
+  vector[n] Dif_GDP;     // predictor 1
+  vector[n] Dif_Inflation_Rate;     // predictor 2
+  vector[n] Dif_Interest_Rate;     // predictor 3
+}
+parameters {
+  real<lower=0> sigma; // std of response, single continuous value
+  real b0;
+  real b1;
+  real b2;
+  real b3;
+}
+model {
+  vector[380] mu; // vector of n values: expected 
+  for (i in 1:n) { // loop over the n cases in the dataset to estimate mu_i values
+    mu[i] = b0 + b1 * Dif_GDP[i] + b2 * Dif_Inflation_Rate[i] + b3 * Dif_Interest_Rate[i]; 
+  }
+  b0 ~ normal(0, 1); // prior for intercept
+  b1 ~ normal(0, 1); // prior for both slope 1
+  b2 ~ normal(0, 1); // prior for both slope 2
+  b3 ~ normal(0, 1); // prior for both slope 3
+  sigma ~ exponential(1); // prior for sigma
+  delta_exch_rate ~ normal(mu, sigma); // defining likelihood in terms of mus and sigma
+}
+'
+
+# fit the model
+exch_rate_model <- rstan::stan(model_code = stan_program, data = scaled_data)
+exch_rate_model
+```
+
+
+
+
+
