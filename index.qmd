@@ -5,6 +5,7 @@ format:
   html:
     code-tools: true
     toc: true
+    code-fold: true
     embed-resources: true
     self-contained: true
 ---
@@ -12,8 +13,6 @@ format:
 ## Main Question:
 
 How do Differentials in Interest rates, Inflation, and Country's economical Growth impact the currency exchange rate between US dollars and Chinese Yuan?
-
-How confidently can we predict currency exchange rate from Differentials in Interest rates, Inflation, and Country's Economical Growth?
 
 ## Data Preperation
 
@@ -158,11 +157,14 @@ scaled_data <- data %>%
     .cols = where(is.numeric),
     .fns = ~ scale(.) %>% as.vector
   ))
-```
-```{r}
+
 scaled_data <- scaled_data |>
   select(Dif_GDP, Dif_Interest_Rate, Dif_Inflation_Rate, delta_exch_rate)
+
+data_with_na <- scaled_data
+
 scaled_data <- na.omit(scaled_data)
+
 glimpse(scaled_data)
 ```
 
@@ -186,7 +188,7 @@ gg_dag(causal_diagram)
 $$
 \text{Exchange Rate Difference Scaled} \sim \text{Normal}(\mu_i, \sigma) 
 $$
-$$\mu_i \sim \beta_0 + \beta_1 * \text{Interest Rate Difference Scaled} + \beta_2 * \text{Inflation Rate Difference Scaled} + \beta_3 * \text{Growth Rate Difference Scaled} $$
+$$\mu_i \sim \beta_0 + \beta_1 * \text{Interest Rate Differential Scaled} + \beta_2 * \text{Inflation Rate Differential Scaled} + \beta_3 * \text{Growth Rate Differential Scaled} $$
 $$
 \beta_0 \sim \text{Normal}(0,1)
 $$
@@ -260,47 +262,109 @@ The prior predictive distribution show the simulated delta_exchange_rate differe
 
 ## Fitting Model
 
-
-```{r}
+```{r,results='hide'}
 stan_data <- compose_data(scaled_data)
-```
-
-
-```{r}
-
-stan_program <- '
-data {
-  int<lower=1> n;     // number of observations
-  vector[n] delta_exch_rate;    // response
-  vector[n] Dif_Interest_Rate;     // predictor 1
-  vector[n] Dif_Inflation_Rate;     // predictor 2
-  vector[n] Dif_GDP;     // predictor 3
-}
-parameters {
-  real<lower=0> sigma; // std of response, single continuous value
-  real b0;
-  real b1;
-  real b2;
-  real b3;
-}
-model {
-  vector[n] mu; // vector of n values: expected 
-  for (i in 1:n) { // loop over the n cases in the dataset to estimate mu_i values
-    mu[i] = b0 + b1 * Dif_Interest_Rate[i] + b2 * Dif_Inflation_Rate[i] + b3 * Dif_GDP[i]; 
-  }
-  b0 ~ normal(0, 1); // prior for intercept
-  b1 ~ normal(0.5, 1); // prior for both slope 1 (Interest)
-  b2 ~ normal(-0.5, 1); // prior for both slope 2 (Inflation)
-  b3 ~ normal(0.5, 1); // prior for both slope 3 (GDP)
-  sigma ~ exponential(1); // prior for sigma
-  delta_exch_rate ~ normal(mu, sigma); // defining likelihood in terms of mus and sigma
-}
-'
-
 # fit the model
-exch_rate_model <- rstan::stan(model_code = stan_program, data = stan_data)
+exch_rate_model <- rstan::stan(file = 'model1.stan', data = stan_data)
+
+```
+```{r}
 exch_rate_model
 ```
+
+```{r}
+bayesplot::mcmc_trace(exch_rate_model, pars = c("b0", "b1", "b2", "b3", "sigma"))
+```
+
+## Model Diagnosis
+
+**n_eff: ** n_eff is effective number of samples drawn which is an estimate of the number of independent samples from the posterior distribution. The model above displays large n_eff numbers which indicate a relatively good model.
+
+**Rhat: ** reached exactly 1 for the model above, meaning the chain converge and well-mixed, indicating a good model.
+
+**Trace Plot: ** The trace plot demonstrate the following aspects, indicating the model above is good to draw conclusions from. 
+
+  - Stationary: the path of each chain staying within the same high-probability portion of the posterior distribution. In the plot, the zigzag traces all stays relatively around a stable central tendency.
+
+  - Good-Mixing: the zigzag show that the chain doesn’t slowly wander, but rather rapidly explores the full region.
+
+  - Convergence: multiple, independent chains stick around the same region of high probability.
+
+## Model Comparison
+
+I fitted another model with less predictors:
+```{r,results='hide'}
+scaled_data2 <- scaled_data|>
+  select(Dif_Inflation_Rate, Dif_GDP, delta_exch_rate)
+stan_data2 <- compose_data(scaled_data2)
+# model without Differential in Interest Rate predictor
+exch_rate_model2 <- rstan::stan(file = 'model2.stan', data = stan_data2)
+```
+
+```{r,results='hide'}
+# without Dif_Inflation_Rate
+scaled_data3 <- scaled_data|>
+  select(Dif_Interest_Rate, Dif_GDP, delta_exch_rate)
+stan_data3 <- compose_data(scaled_data3)
+# model without Differential in Inflation Rate predictor
+exch_rate_model3 <- rstan::stan(file = 'model3.stan', data = stan_data3)
+```
+```{r,results='hide'}
+# without GDP
+scaled_data4 <- scaled_data|>
+  select(Dif_Interest_Rate, Dif_Inflation_Rate, delta_exch_rate)
+stan_data4 <- compose_data(scaled_data4)
+# model without Differential in GDP predictor
+exch_rate_model4 <- rstan::stan(file = 'model4.stan', data = stan_data4)
+```
+
+
+
+```{r}
+# Model Comparison
+rethinking::compare(exch_rate_model,exch_rate_model2,exch_rate_model3,exch_rate_model4, func = WAIC)
+```
+```{r}
+# Model Comparison
+rethinking::compare(exch_rate_model,exch_rate_model2,exch_rate_model3,exch_rate_model4, func = PSIS)
+```
+According to WAIC test, exch_rate_model4 with two predictor, differential in Interest Rate and differential in Inflation Rate, is better than other models as its WAIC score is the lowest among the different models. 
+According to PSIS, however, exch_rate_model with all three predictors, differential in Interest Rate, differential in Inflation Rate, and differential in GDP, as its PSIS score is the lowest among the different models. 
+
+## Posteriors
+
+```{r}
+posterior_samples <- as.data.frame(exch_rate_model)
+
+posterior_long <- posterior_samples %>%
+  pivot_longer(cols = c(b0, b1, b2, b3, sigma), names_to = "parameter", values_to = "value")
+
+gf_dens(~value | parameter, data = posterior_long, group = ~parameter, color = ~parameter, size = 1)
+```
+
+
+### Interpret Posterior:
+
+b0 centers around 0.01, suggesting that if predictors such as differentials in interest rate, differentials in inflation, and differentials in GDP are controlled as 0, the change in exchange rate would likely be 0.01, a very slight positive increase of the exchange rate between US dollars and Chinese Yuan. 
+
+b1 centers around - 0.05, suggesting that 1 standard deviation increase in the differentials in interest rate (US - CN) is correlated with 0.05 standard deviation decrease in exchange rate. In other words, as US has a higher interest rate than Chinese Yuan, the value of US dollars will very slightly decrease in term of the Chinese Yuan currency. 
+
+b2 centers around -0.2, suggesting that 1 standard deviation increase in the differentials in inflation (US - CN) is correlated with 0.2 decrease in exchange rate. In other words, as US dollars experience a higher inflation rate than Chinese Yuan, the value of US dollars will slightly decrease in terms of Chinese Yuan currency.
+
+b3 centers around 0.08, suggesting that 1 standard deviation increase in the differentials in GDP (US - CN) is correlated with 0.08 increase in exchange rate. In other words, as US experience a higher economic growth than China, measured by GDP, the value of US dollars will slightly increase in terms of Chinese Yuan currency.
+
+sigma centers around 1.01, suggesting that the standard deviation for the exchange rate is aorund 1.01. 
+
+### Discussion & Conclusion:
+
+The model result suggests that: 
+
+(1) there's a slight negative relationship between differentials in interest rate and change in exchange rate, such that as US interest rate is higher than Chinese Yuan for 1 standardard deviation, the value of US dollars **decrease** 0.05 standard deviation in term of the Chinese Yuan currency. This result contradict other sources in that most articles suggest higher interest rate can increase exchange rate by attracting investors and increasing currency values
+
+(2) there's a negative relationship between differentials in inflation rate and change in exchange rate, such that as US inflation rate is higher than Chinese Yuan for 1 standardard deviation, the value of US dollars **decrease** 0.2 standard deviation in term of the Chinese Yuan currency. This result align with other sources which suggest rising inflation rate can depreciate currency value and thus lead to lower exchange rate. 
+
+(3) there's a positive relationship between differentials in country's economic growth and change in exchange rate, such that as US GDP is higher than Chinese GDP for 1 standard deviation, the value of US dollars **increase** 0.08 standard deviation in term of the Chinese Yuan currency. This finding align with other sources as well, which suggest rising economic growht increase currency value and attract investors, leading to higher exchange rate.
+
 
 
 
