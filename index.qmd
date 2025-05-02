@@ -207,18 +207,17 @@ $$
 
 ## Rationals for Prior
 
-Since I standardized all predictors and response variable, and are unsure of the relationship between those predictors and the response variable (there are ambivalent information about the direction of the affects of these predictors on exchange rate), so I have priors of the intercept and slope centers at 0 with standard deviation of 1. These priors suggests that I suspect if all predictors are kept at 0, the response variable would be at its mean (z-score = 0). And for all predictors, their relationship with the response variable are equally likely to be positive or negative, and most likely fall within -3 and 3 standard deviation. 
+Among the key determinants, differentials in interest rates, inflation rates, and gross domestic product growth between US and China have been widely studied as fundamental economic forces influencing currency exchange values. Prior research with Autoregressive distributed lag (ARDL) model indicates that gross domestic product growth have a positive effect on the exchange rate between USD and CNY, while interest rate and inflation rates have a negative effect (Khan, M.K.,2019). While most research agrees on the positive effect of GDP/economic growth and the negative effects of inflation rate toward exchange rate, findings on the relationship between interest rate and currency exchange rate is equivocal. Some studies suggest that an increase in US Federal Reserve's interest rate would lead to depreciation of CNY and appreciation in USD (Zhou and Zhang, Li). 
+
+Since higher inflation rate may depreciate the currency and thus lowers the exchange rate, if Dif_inflation_rate increases, delta_dif_exchange_rate should decrease. I'm using a normal distribution center at -0.5 and has the standard deviation of 1. This means that for one standard deviation increase in differential in inflation rate, I suspect the differential in delta exchange rate will most likely decrease by 0.5 standard deviation. However, there's still possibility for a wide range of positive and negative slopes. 
 
 
-
-Higher Interest Rate, on the other hand, can attract foreign investers and drive up the currency value(https://www.investopedia.com/trading/factors-influence-exchange-rates/). Therefore, if dif_interest_rate (US - CN) increases, delta_dif_exchange_rate will increase, meaning US currency will worth more in China currency. For its slope, beta 1, I'm using a normal distribution center at 0.5 and has the standard deviation of 1. This means that for one standard deviation increase in differential in interest rate, the delta differential in exchange rate will most likely increase by 0.5 standard deviation. However, there is still possibility for a wider range of slope from negative to positive.
-
-Higher inflation rate can depreciate the currency and thus lowers the exchange rate.  (https://www.investopedia.com/trading/factors-influence-exchange-rates/) . Therefore, if Dif_inflation_rate increases, delta_dif_exchange_rate should decrease. I'm using a normal distribution center at -0.5 and has the standard deviation of 1. This means that for one standard deviation increase in differential in inflation rate, I suspect the differential in delta exchange rate will most likely decrease by 0.5 standard deviation. However, there's still possibility for a wide range of positive and negative slopes.  
+Since there are ambivalent findings on the relationship between interest rate and exchange rate, but more studies lean toward a positive relationship, theorizing a higher interest rate attract foreign investers and drive up demand for the currency (Li). Therefore, if dif_interest_rate (US - CN) increases, delta_dif_exchange_rate will increase, meaning US currency will worth more in China currency. For its slope, beta 1, I'm using a normal distribution center at 0.5 and has the standard deviation of 1. This means that for one standard deviation increase in differential in interest rate, the delta differential in exchange rate will most likely increase by 0.5 standard deviation. However, there is still possibility for a wider range of slope from negative to positive.
 
 
-GDP measures growth. The better the growth, the better the currency for it attracts foreign investers, driving up the needs for the currency (https://www.economicshelp.org/macroeconomics/exchangerate/factors-influencing/). Therefore, if Dif_GDP increase,  delta_dif_exchange_rate should also increase. For the slope for Dif_GDP, Beta 3, I'm using a normal distribution centering at 0.5 with standard deviation of 1. This prior suggests a likely possitive relationship between GDP and exchange rate, but still keep the possibility for a wide range of both positive and negative values.
+GDP measures growth. The better the growth, the better the currency for it attracts foreign investers, driving up the needs for the currency(Khan, M.K.). Therefore, if Dif_GDP increase,  delta_dif_exchange_rate should also increase. For the slope for Dif_GDP, Beta 3, I'm using a normal distribution centering at 0.5 with standard deviation of 1. This prior suggests a likely possitive relationship between GDP and exchange rate, but still keep the possibility for a wide range of both positive and negative values.
 
-I suspect if all the above are kept at 0, there would be no change in exchange rate. Therefore I used a normal distribution that centers at 0 with standard deviation of 1 for Beta 0, the intercept. 
+I suspect that if all the above are kept at 0, there would be no change in exchange rate. Therefore I used a normal distribution that centers at 0 with standard deviation of 1 for Beta 0, the intercept. 
 
 I'm using exponential(1) as the prior for sigma, with lower bound at 0, because the standard deviation cannot be 0. 
 
@@ -365,8 +364,12 @@ The model result suggests that:
 
 (3) there's a positive relationship between differentials in country's economic growth and change in exchange rate, such that as US GDP is higher than Chinese GDP for 1 standard deviation, the value of US dollars **increase** 0.08 standard deviation in term of the Chinese Yuan currency. This finding align with other sources as well, which suggest rising economic growht increase currency value and attract investors, leading to higher exchange rate.
 
+### Work Cited
 
+Khan, M.K., Teng, JZ. & Khan, M.I. *Cointegration between macroeconomic factors and the exchange rate USD/CNY.* Financ Innov 5, 5 (2019). https://doi.org/10.1186/s40854-018-0117-x
 
+Li, Jie. *The Impact of the Interest Rates Raised by Federal Reserve System on the Exchange Rate of the US Dollar Against the Chinese Yuan.* 2023, https://www.researchgate.net/publication/376131422.
 
+Zhou, Hao, and Qiang Zhang. *Analysis of Interest Rate Hikes and Exchange Rate Between U.S. and China.* 2023, https://www.researchgate.net/publication/376132090.
 
 
