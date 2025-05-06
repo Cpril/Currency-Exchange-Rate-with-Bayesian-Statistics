@@ -10,11 +10,17 @@ format:
     self-contained: true
 ---
 
-## Main Question:
+## Introduction
+
+Understanding the factors that drive currency exchange rate fluctuations is critical for policymakers, investors, and businesses engaged in international trade. The exchange rate between the Chinese Yuan (CNY) and the United States Dollar (USD) is a closely watched economic indicator, reflecting complex interactions between the two large economies. This analysis will focus on macroeconomic predictors -- interest rate differentials (percentage differences), inflation rate differentials (percentage differences), and GDP growth differentials (percentage differences) -- aiming to explore which macroeconomic predictors contribute to changes in the USD/CNY exchange rate (percentage differences) and to what degree. A Bayesian approach enables the incorporation of prior knowledge and probabalistic inference, which is suitable for the dynamic economies. 
+
+
+
+### Main Question:
 
 How do Differentials in Interest rates, Inflation, and Country's economical Growth impact the currency exchange rate between US dollars and Chinese Yuan?
 
-## Data Preperation
+### Data Preperation
 
 ```{r, warning=FALSE}
 #| include: false
@@ -164,13 +170,17 @@ scaled_data <- scaled_data |>
 data_with_na <- scaled_data
 
 scaled_data <- na.omit(scaled_data)
+scaled_data <- scaled_data %>%
+  filter(delta_exch_rate <= 15)
 
 glimpse(scaled_data)
 ```
+A first difference calculation is applied to the response variable Exchange Rate because the later exchange rate might be heavily dependent on previous exchange rate. Therefore, the change in exchange rate is calculated as Delta Exchange Rate. Additionally, all predictors and response variables -- Interest Rate Differentials (USD - CNY), Inflation Rate Differentials (USD - CNY), GDP Differentials(USD - CNY), and Delta Exchange Rate are standardized.  
+
 
 ## Casual Diagram:
 
-[Economics Help](https://www.economicshelp.org/macroeconomics/exchangerate/factors-influencing/) listed 5 factors that would affect exchange rate: rate of growth, Interest rate, Inflation rate, Competitiveness, and Speculations. Since competitiveness and Speculations are hard to measure quantitatively, they are not included. Besides, rate of growth is measured by GDP ratio.
+[Economics Help](https://www.economicshelp.org/macroeconomics/exchangerate/factors-influencing/) listed 5 factors that would affect exchange rate: rate of growth (GDP), Interest rate, Inflation rate, Competitiveness, and Speculations. Since competitiveness and Speculations are hard to measure quantitatively, they are not included. 
 
 
 ```{r}
@@ -179,9 +189,13 @@ causal_diagram <- dagitty("dag{
   Inflation_Rate_dif -> delta_Exchange_Rate;
   Interest_Rate_dif -> Inflation_Rate_dif;
   Growth_Rate_dif -> delta_Exchange_Rate;
+  Competitiveness -> delta_Exchange_Rate;
+  Speculations -> delta_Exchange_Rate;
 }")
 gg_dag(causal_diagram)
 ```
+Competitiveness and Speculations are relatively subjective and hard to quantify, therefore, this analysis will only include Growth Rate Differentials, Interest Rate Differentials, and Inflation Rate Differentials as the predictors.  While Interest Rate and Inflation Rate is known to interact with each other, I'm more interested in how they seperately influence the delta Exchange Rate. Interest Rate Differential is chosen as the key predictor, therefore, Growth Rate differential and Inflation Rate differential are both confounders that also influence changes in exchange rate between US and China.
+
 
 ## Model Description
 
@@ -209,13 +223,13 @@ $$
 
 Among the key determinants, differentials in interest rates, inflation rates, and gross domestic product growth between US and China have been widely studied as fundamental economic forces influencing currency exchange values. Prior research with Autoregressive distributed lag (ARDL) model indicates that gross domestic product growth have a positive effect on the exchange rate between USD and CNY, while interest rate and inflation rates have a negative effect (Khan, M.K.,2019). While most research agrees on the positive effect of GDP/economic growth and the negative effects of inflation rate toward exchange rate, findings on the relationship between interest rate and currency exchange rate is equivocal. Some studies suggest that an increase in US Federal Reserve's interest rate would lead to depreciation of CNY and appreciation in USD (Zhou and Zhang, Li). 
 
-Since higher inflation rate may depreciate the currency and thus lowers the exchange rate, if Dif_inflation_rate increases, delta_dif_exchange_rate should decrease. I'm using a normal distribution center at -0.5 and has the standard deviation of 1. This means that for one standard deviation increase in differential in inflation rate, I suspect the differential in delta exchange rate will most likely decrease by 0.5 standard deviation. However, there's still possibility for a wide range of positive and negative slopes. 
+Since higher inflation rate may depreciate the currency and thus lowers the exchange rate, if scaled Dif_inflation_rate increases, scaled delta_dif_exchange_rate should decrease. I'm using a normal distribution center at -0.5 and has the standard deviation of 1. This means that for one standard deviation increase in scaled differential in inflation rate, I suspect the scaled differential in delta exchange rate will most likely decrease by 0.5 standard deviation. However, there's still possibility for a wide range of positive and negative slopes. 
 
 
-Since there are ambivalent findings on the relationship between interest rate and exchange rate, but more studies lean toward a positive relationship, theorizing a higher interest rate attract foreign investers and drive up demand for the currency (Li). Therefore, if dif_interest_rate (US - CN) increases, delta_dif_exchange_rate will increase, meaning US currency will worth more in China currency. For its slope, beta 1, I'm using a normal distribution center at 0.5 and has the standard deviation of 1. This means that for one standard deviation increase in differential in interest rate, the delta differential in exchange rate will most likely increase by 0.5 standard deviation. However, there is still possibility for a wider range of slope from negative to positive.
+Since there are ambivalent findings on the relationship between interest rate and exchange rate, but more studies lean toward a positive relationship, theorizing a higher interest rate attract foreign investers and drive up demand for the currency (Li). Therefore, if scaled dif_interest_rate (US - CN) increases, scaled delta_dif_exchange_rate will increase, meaning US currency will worth more in China currency. For its slope, beta 1, I'm using a normal distribution center at 0.5 and has the standard deviation of 1. This means that for one standard deviation increase in differential in interest rate, the delta differential in exchange rate will most likely increase by 0.5 standard deviation. However, there is still possibility for a wider range of slope from negative to positive.
 
 
-GDP measures growth. The better the growth, the better the currency for it attracts foreign investers, driving up the needs for the currency(Khan, M.K.). Therefore, if Dif_GDP increase,  delta_dif_exchange_rate should also increase. For the slope for Dif_GDP, Beta 3, I'm using a normal distribution centering at 0.5 with standard deviation of 1. This prior suggests a likely possitive relationship between GDP and exchange rate, but still keep the possibility for a wide range of both positive and negative values.
+GDP measures growth. The better the growth, the better the currency for it attracts foreign investers, driving up the needs for the currency(Khan, M.K.). Therefore, if scaled Dif_GDP increase,  scaled delta_dif_exchange_rate should also increase. For the slope for Dif_GDP, Beta 3, I'm using a normal distribution centering at 0.5 with standard deviation of 1. This prior suggests a likely possitive relationship between GDP and exchange rate, but still keep the possibility for a wide range of both positive and negative values.
 
 I suspect that if all the above are kept at 0, there would be no change in exchange rate. Therefore I used a normal distribution that centers at 0 with standard deviation of 1 for Beta 0, the intercept. 
 
@@ -257,6 +271,12 @@ gf_histogram(~y_sim,
 
 The prior predictive distribution show the simulated delta_exchange_rate differences centers at 0, and have a range from about -12 to 12, which is large for a scaled z-score variable, but this wide range can make sure we don't exclude possible values. 
 
+**Main Predictor: Interest Rate**
+```{r}
+gf_point(y_sim ~ interest, data = prior_pred)
+```
+The graph above shows distribution of y_sim in relation to the main predictor, Interest Rate. The y_sim values centers around 0, which is expected because all predictors and response variables are standardized. 
+
 
 
 ## Fitting Model
@@ -264,20 +284,20 @@ The prior predictive distribution show the simulated delta_exchange_rate differe
 ```{r,results='hide'}
 stan_data <- compose_data(scaled_data)
 # fit the model
-exch_rate_model <- rstan::stan(file = 'model1.stan', data = stan_data)
+All3predictor_model <- rstan::stan(file = 'model1.stan', data = stan_data)
 
 ```
 ```{r}
-exch_rate_model
+summary(All3predictor_model, pars = c("sigma", "b0", "b1", "b2", "b3"))
 ```
 
 ```{r}
-bayesplot::mcmc_trace(exch_rate_model, pars = c("b0", "b1", "b2", "b3", "sigma"))
+bayesplot::mcmc_trace(All3predictor_model, pars = c("b0", "b1", "b2", "b3","sigma"))
 ```
 
 ## Model Diagnosis
 
-**n_eff: ** n_eff is effective number of samples drawn which is an estimate of the number of independent samples from the posterior distribution. The model above displays large n_eff numbers which indicate a relatively good model.
+**n_eff: ** n_eff is effective number of samples drawn which is an estimate of the number of independent samples from the posterior distribution. The model above displays large n_eff numbers, which suggests that my posterior estimates are based on a sufficient number of effective samples. Using a default stan setting, the model includes 4 chains, 2000 iterations and 1000 warm-up per chain, totalling to 4000 post warm-up samples. The n_eff for the model ranges from ~3000 to ~5000, indicating low autocorrelation and higher independence and suggesting the model could yield reliable results for inference.
 
 **Rhat: ** reached exactly 1 for the model above, meaning the chain converge and well-mixed, indicating a good model.
 
@@ -291,13 +311,20 @@ bayesplot::mcmc_trace(exch_rate_model, pars = c("b0", "b1", "b2", "b3", "sigma")
 
 ## Model Comparison
 
-I fitted another model with less predictors:
+I fitted a few models with less predictors:
+
+- Inflation_GDP: Model with predictors: scaled Inflation Rate Differential and scaled GDP Differential
+
+- Interest_GDP: Model with predictors: scaled Interest Rate Differential and scaled GDP Differential
+
+- Interest_Inflation: Model with predictors: scaled Interest Rate Differential and scaled Inflation Rate Differential
+
 ```{r,results='hide'}
 scaled_data2 <- scaled_data|>
   select(Dif_Inflation_Rate, Dif_GDP, delta_exch_rate)
 stan_data2 <- compose_data(scaled_data2)
 # model without Differential in Interest Rate predictor
-exch_rate_model2 <- rstan::stan(file = 'model2.stan', data = stan_data2)
+Inflation_GDP <- rstan::stan(file = 'model2.stan', data = stan_data2)
 ```
 
 ```{r,results='hide'}
@@ -306,7 +333,7 @@ scaled_data3 <- scaled_data|>
   select(Dif_Interest_Rate, Dif_GDP, delta_exch_rate)
 stan_data3 <- compose_data(scaled_data3)
 # model without Differential in Inflation Rate predictor
-exch_rate_model3 <- rstan::stan(file = 'model3.stan', data = stan_data3)
+Interest_GDP <- rstan::stan(file = 'model3.stan', data = stan_data3)
 ```
 ```{r,results='hide'}
 # without GDP
@@ -314,26 +341,27 @@ scaled_data4 <- scaled_data|>
   select(Dif_Interest_Rate, Dif_Inflation_Rate, delta_exch_rate)
 stan_data4 <- compose_data(scaled_data4)
 # model without Differential in GDP predictor
-exch_rate_model4 <- rstan::stan(file = 'model4.stan', data = stan_data4)
+Interest_Inflation <- rstan::stan(file = 'model4.stan', data = stan_data4)
 ```
 
-
+**WAIC**
 
 ```{r}
 # Model Comparison
-rethinking::compare(exch_rate_model,exch_rate_model2,exch_rate_model3,exch_rate_model4, func = WAIC)
+rethinking::compare(All3predictor_model,Inflation_GDP,Interest_GDP,Interest_Inflation, func = WAIC)
 ```
+**PSIS**
+
 ```{r}
 # Model Comparison
-rethinking::compare(exch_rate_model,exch_rate_model2,exch_rate_model3,exch_rate_model4, func = PSIS)
+rethinking::compare(All3predictor_model,Inflation_GDP,Interest_GDP,Interest_Inflation, func = PSIS)
 ```
-According to WAIC test, exch_rate_model4 with two predictor, differential in Interest Rate and differential in Inflation Rate, is better than other models as its WAIC score is the lowest among the different models. 
-According to PSIS, however, exch_rate_model with all three predictors, differential in Interest Rate, differential in Inflation Rate, and differential in GDP, as its PSIS score is the lowest among the different models. 
+The standard errors are very high, suggesting large overlap between the model preformances. Therefore its results are not reliable in indicating which model preforms better.  
 
 ## Posteriors
 
 ```{r}
-posterior_samples <- as.data.frame(exch_rate_model)
+posterior_samples <- as.data.frame(All3predictor_model)
 
 posterior_long <- posterior_samples %>%
   pivot_longer(cols = c(b0, b1, b2, b3, sigma), names_to = "parameter", values_to = "value")
@@ -342,19 +370,72 @@ gf_dens(~value | parameter, data = posterior_long, group = ~parameter, color = ~
 ```
 
 
-### Interpret Posterior:
+
+
+## Interpret Posterior:
 
 b0 centers around 0.01, suggesting that if predictors such as differentials in interest rate, differentials in inflation, and differentials in GDP are controlled as 0, the change in exchange rate would likely be 0.01, a very slight positive increase of the exchange rate between US dollars and Chinese Yuan. 
 
+**Interest Rate**
+```{r}
+one_draw <- posterior_samples[1, ]
+
+pred_grid <- tibble(
+  Interest = scaled_data$Dif_Interest_Rate,
+  Inflation_Rate = scaled_data$Dif_Inflation_Rate,
+  GDP = scaled_data$Dif_GDP,
+  y_pred = rnorm(
+    n = nrow(scaled_data),
+    mean = one_draw$b0 +
+           one_draw$b1 * Interest +
+           one_draw$b2 * Inflation_Rate +
+           one_draw$b3 * GDP,
+    sd = one_draw$sigma
+  )
+)
+
+
+gf_point(y_pred ~ Interest, data = pred_grid, color = "blue") %>%
+  gf_point(delta_exch_rate ~ Dif_Interest_Rate, data = scaled_data, color = "red", size = 2) %>%
+  gf_labs(
+    title = "Posterior Predictive Distribution (Blue = Prediction; Red = Data)",
+    x = "Predictor (Interest Rate Differentials)",
+    y = "Response (Delta Exchange Rate)"
+  )
+
+```
+
 b1 centers around - 0.05, suggesting that 1 standard deviation increase in the differentials in interest rate (US - CN) is correlated with 0.05 standard deviation decrease in exchange rate. In other words, as US has a higher interest rate than Chinese Yuan, the value of US dollars will very slightly decrease in term of the Chinese Yuan currency. 
+
+**Inflation Rate**
+```{r}
+gf_point(y_pred ~ Inflation_Rate, data = pred_grid, color = "blue") %>%
+  gf_point(delta_exch_rate ~ Dif_Inflation_Rate, data = scaled_data, color = "red", size = 2) %>%
+  gf_labs(
+    title = "Posterior Predictive Distribution (Blue = Prediction; Red = Data)",
+    x = "Predictor (Inflation Rate Differentials)",
+    y = "Response (Delta Exchange Rate)"
+  )
+```
 
 b2 centers around -0.2, suggesting that 1 standard deviation increase in the differentials in inflation (US - CN) is correlated with 0.2 decrease in exchange rate. In other words, as US dollars experience a higher inflation rate than Chinese Yuan, the value of US dollars will slightly decrease in terms of Chinese Yuan currency.
 
-b3 centers around 0.08, suggesting that 1 standard deviation increase in the differentials in GDP (US - CN) is correlated with 0.08 increase in exchange rate. In other words, as US experience a higher economic growth than China, measured by GDP, the value of US dollars will slightly increase in terms of Chinese Yuan currency.
+**GDP**
+```{r}
+gf_point(y_pred ~ GDP, data = pred_grid, color = "blue") %>%
+  gf_point(delta_exch_rate ~ Dif_GDP, data = scaled_data, color = "red", size = 2) %>%
+  gf_labs(
+    title = "Posterior Predictive Distribution (Blue = Prediction; Red = Data)",
+    x = "Predictor (GDP Differentials)",
+    y = "Response (Delta Exchange Rate)"
+  )
+```
+
+b3 centers around 0.08, suggesting that 1 standard deviation increase in the differentials in GDP (US - CN) is correlated with 0.08 increase in exchange rate. In other words, as US experience a higher economic growth than China, measured by GDP, the value of US dollars will slightly increase in terms of Chinese Yuan currency. However, as the graph suggests, the variance is high, suggesting high uncertainty of this finding. 
 
 sigma centers around 1.01, suggesting that the standard deviation for the exchange rate is aorund 1.01. 
 
-### Discussion & Conclusion:
+## Discussion & Conclusion:
 
 The model result suggests that: 
 
@@ -364,12 +445,11 @@ The model result suggests that:
 
 (3) there's a positive relationship between differentials in country's economic growth and change in exchange rate, such that as US GDP is higher than Chinese GDP for 1 standard deviation, the value of US dollars **increase** 0.08 standard deviation in term of the Chinese Yuan currency. This finding align with other sources as well, which suggest rising economic growht increase currency value and attract investors, leading to higher exchange rate.
 
-### Work Cited
+
+## Work Cited
 
 Khan, M.K., Teng, JZ. & Khan, M.I. *Cointegration between macroeconomic factors and the exchange rate USD/CNY.* Financ Innov 5, 5 (2019). https://doi.org/10.1186/s40854-018-0117-x
 
 Li, Jie. *The Impact of the Interest Rates Raised by Federal Reserve System on the Exchange Rate of the US Dollar Against the Chinese Yuan.* 2023, https://www.researchgate.net/publication/376131422.
 
 Zhou, Hao, and Qiang Zhang. *Analysis of Interest Rate Hikes and Exchange Rate Between U.S. and China.* 2023, https://www.researchgate.net/publication/376132090.
-
-
